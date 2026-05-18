@@ -1,4 +1,4 @@
-booking_id,hotel_id,date_id,reserved_room_type_id,assigned_room_type_id,country_id,market_segment_id,customer_segment_id,meal_id,is_canceled,booking_status,lead_time,total_nights,total_guests,adr,booking_value,estimated_revenue,booking_changes,days_in_waiting_list,required_car_parking_spaces,total_of_special_requests
+fact_booking_id,hotel_id,date_id,reserved_room_type_id,assigned_room_type_id,country_id,market_segment_id,customer_segment_id,meal_id,is_canceled,booking_status,lead_time,total_nights,total_guests,adr,booking_value,estimated_revenue,booking_changes,days_in_waiting_list,required_car_parking_spaces,total_of_special_requests
 1,1,20150701,1,2,1,1,1,1,0,Not Canceled,7,1,1,75,75,75,0,0,0,0
 2,1,20150701,1,1,1,2,1,1,0,Not Canceled,13,1,1,75,75,75,0,0,0,0
 3,1,20150701,1,1,1,3,1,1,0,Not Canceled,14,2,2,98,196,196,0,0,0,1

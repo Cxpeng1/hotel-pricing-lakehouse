@@ -1,0 +1,24 @@
+{
+    "sqltools.connections": [
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 8118,
+            "driver": "PostgreSQL",
+            "name": "Hotel_Booking",
+            "database": "Hotel_Booking_db",
+            "username": "postgres"
+        },
+        {
+            "ssh": "Disabled",
+            "previewLimit": 50,
+            "server": "localhost",
+            "port": 8118,
+            "driver": "PostgreSQL",
+            "name": "Hotel_booking",
+            "database": "hotel_booking_db",
+            "username": "postgres"
+        }
+    ]
+}
