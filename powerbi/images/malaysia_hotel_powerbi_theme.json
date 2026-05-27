@@ -1,0 +1,181 @@
+{
+  "name": "Malaysia Hotel Analytics Theme",
+  "dataColors": [
+    "#0B1F33",
+    "#D4AF37",
+    "#2A9D8F",
+    "#F4A261",
+    "#E76F51",
+    "#6C757D",
+    "#8ECAE6",
+    "#264653"
+  ],
+  "background": "#F7F3EA",
+  "foreground": "#0B1F33",
+  "tableAccent": "#D4AF37",
+  "visualStyles": {
+    "*": {
+      "*": {
+        "title": [
+          {
+            "fontFace": "Segoe UI Semibold",
+            "fontSize": 12,
+            "color": {
+              "solid": {
+                "color": "#0B1F33"
+              }
+            }
+          }
+        ],
+        "border": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#E6D8B8"
+              }
+            },
+            "radius": 8
+          }
+        ],
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "visualHeader": [
+          {
+            "show": false
+          }
+        ]
+      }
+    },
+    "card": {
+      "*": {
+        "labels": [
+          {
+            "fontFace": "Segoe UI Semibold",
+            "fontSize": 22,
+            "color": {
+              "solid": {
+                "color": "#0B1F33"
+              }
+            }
+          }
+        ],
+        "categoryLabels": [
+          {
+            "fontFace": "Segoe UI",
+            "fontSize": 10,
+            "color": {
+              "solid": {
+                "color": "#6C757D"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "slicer": {
+      "*": {
+        "items": [
+          {
+            "fontFace": "Segoe UI",
+            "fontSize": 10,
+            "color": {
+              "solid": {
+                "color": "#0B1F33"
+              }
+            }
+          }
+        ],
+        "header": [
+          {
+            "fontFace": "Segoe UI Semibold",
+            "fontSize": 10,
+            "color": {
+              "solid": {
+                "color": "#0B1F33"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "tableEx": {
+      "*": {
+        "grid": [
+          {
+            "outlineColor": {
+              "solid": {
+                "color": "#E6D8B8"
+              }
+            },
+            "gridVertical": true,
+            "gridVerticalColor": {
+              "solid": {
+                "color": "#EFE6D3"
+              }
+            },
+            "gridHorizontal": true,
+            "gridHorizontalColor": {
+              "solid": {
+                "color": "#EFE6D3"
+              }
+            }
+          }
+        ],
+        "columnHeaders": [
+          {
+            "fontFace": "Segoe UI Semibold",
+            "fontSize": 10,
+            "fontColor": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "backColor": {
+              "solid": {
+                "color": "#0B1F33"
+              }
+            }
+          }
+        ],
+        "values": [
+          {
+            "fontFace": "Segoe UI",
+            "fontSize": 9,
+            "fontColor": {
+              "solid": {
+                "color": "#0B1F33"
+              }
+            }
+          }
+        ]
+      }
+    }
+  },
+  "textClasses": {
+    "title": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 18,
+      "color": "#0B1F33"
+    },
+    "header": {
+      "fontFace": "Segoe UI Semibold",
+      "fontSize": 14,
+      "color": "#0B1F33"
+    },
+    "label": {
+      "fontFace": "Segoe UI",
+      "fontSize": 10,
+      "color": "#6C757D"
+    }
+  }
+}
