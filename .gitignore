@@ -1,0 +1,2 @@
+echo models/*.pkl >> .gitignore
+echo models/*.joblib >> .gitignore
