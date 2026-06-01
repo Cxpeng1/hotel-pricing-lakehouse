@@ -17,3 +17,5 @@ CREATE TABLE fact_booking_predictions (
 \copy fact_booking_predictions FROM 'C:/Users/cxpen/Documents/JOB/Portfolios/hotel-pricing-lakehouse/data/ml/fact_booking_predictions.csv' WITH (FORMAT csv, HEADER true);
 
 select * from fact_booking_predictions limit 10;
+SELECT COUNT(*) 
+FROM fact_booking_predictions;
