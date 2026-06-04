@@ -259,16 +259,43 @@ Example questions:
 
 ## Streamlit AI Dashboard App
 
-A Streamlit app combines the embedded Power BI dashboard and the AI SQL chatbot in one interface.
+A Streamlit app combines the embedded Power BI dashboard, AI SQL chatbot, and documentation RAG chatbot in one interface.
 
 Streamlit features:
 
 - Embedded Power BI report
 - SQL chatbot tab
+- Project documentation Q&A tab
 - Suggested question buttons
 - Model selector
 - Generated SQL visibility toggle
 - Chat history
+
+## Documentation RAG Chatbot
+
+The project also includes a lightweight Retrieval-Augmented Generation chatbot for project documentation.
+
+The RAG chatbot reads:
+
+- `README.md`
+- `docs/*.md`
+
+It retrieves relevant documentation chunks and uses the language model to answer methodology and project-explanation questions.
+
+Example RAG questions:
+
+- What cleaning steps were applied in the Silver layer?
+- Why was Random Forest selected as the final model?
+- What are the main business findings from the analysis?
+- How does the Gold star schema support reporting?
+- What are the limitations of this project?
+
+This complements the SQL agent:
+
+| Agent Type | Best For |
+|---|---|
+| SQL chatbot | Metrics, KPIs, aggregations, and warehouse questions |
+| RAG chatbot | Documentation, methodology, findings, and explanation questions |
 
 Run the app:
 
