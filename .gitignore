@@ -1,3 +1,6 @@
 models/*.pkl
 models/*.joblib
 .env
+__pycache__/
+*.pyc
+*.log
