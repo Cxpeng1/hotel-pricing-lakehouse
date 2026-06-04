@@ -1,30 +1,31 @@
-# Hotel-Pricing-Lakehouse
+# Hotel Pricing Lakehouse
 
-### End-to-end hotel booking analytics project using Python, PostgreSQL, and Power BI to analyze booking demand, cancellation risk, and revenue performance.
+End-to-end hotel booking analytics project using Python, PostgreSQL, Power BI, machine learning, and a LangChain SQL chatbot to analyze booking demand, cancellation risk, and revenue performance.
 
-## 📌Project Overview
+## Project Overview
 
-This project analyzes hotel booking data to identify booking demand patterns, cancellation risk, revenue performance, and predicted cancellation probability across hotel types, market segments, customer types, and time periods. The project follows a lakehouse-style architecture with Bronze, Silver, and Gold layers. Cleaned and modeled data is loaded into PostgreSQL, visualized in Power BI, and extended with a machine learning model to predict booking cancellation risk and expected revenue at risk.
+This project analyzes hotel booking data to understand demand patterns, cancellation behavior, revenue performance, and predicted cancellation risk. It follows a lakehouse-style architecture with Bronze, Silver, and Gold layers.
 
-## ❓Business Problem
+The cleaned and modeled data is loaded into PostgreSQL, visualized in Power BI, extended with a machine learning cancellation model, and connected to an AI SQL agent that allows users to ask business questions in natural language.
 
-Hotels often face uncertainty in booking demand, cancellations, and revenue performance. High cancellation rates can reduce expected revenue, while seasonal demand patterns affect staffing, pricing, and marketing decisions.
+## Business Problem
 
-This project aims to answer the following business questions:
+Hotels often face uncertainty around demand, cancellations, and revenue loss. High cancellation rates can reduce expected revenue, while seasonal demand patterns affect pricing, staffing, and marketing decisions.
+
+This project answers questions such as:
 
 - When does hotel booking demand increase or decrease?
 - Which hotel type receives more bookings?
-- Which customer or market segments are more likely to cancel?
-- How much potential revenue is lost due to cancellations?
+- Which market and customer segments are more likely to cancel?
+- How much expected revenue is at risk due to cancellations?
 - Which months and segments generate the highest revenue?
+- Which bookings are predicted to have high cancellation risk?
 
-## 📂Dataset
+## Dataset
 
-The dataset used in this project is the Hotel Booking Demand dataset from Kaggle.
+This project uses the [Hotel Booking Demand Dataset by Jesse Mostipak](https://www.kaggle.com/datasets/jessemostipak/hotel-booking-demand) from Kaggle.
 
-Source: This project uses the [Hotel Booking Demand Dataset by Jesse Mostipak](https://www.kaggle.com/datasets/jessemostipak/hotel-booking-demand) from Kaggle.
-
-The dataset contains booking records for City Hotel and Resort Hotel, including information such as:
+The dataset contains booking records for City Hotel and Resort Hotel, including:
 
 - Booking status
 - Arrival date
@@ -37,78 +38,183 @@ The dataset contains booking records for City Hotel and Resort Hotel, including 
 - Average Daily Rate
 - Special requests
 
-The raw dataset is not modified in the Bronze layer. Data cleaning and business transformations are applied in the Silver and Gold layers.
+The raw dataset is preserved in the Raw and Bronze layers. Cleaning, feature engineering, modeling, and reporting transformations are applied in later layers.
 
-## 🏗️Project Architecture
+## Tech Stack
 
-![Project Architecture](powerbi/images/Pipeline-flow.png)
+- Python
+- Pandas
+- Scikit-learn
+- PostgreSQL
+- Power BI
+- LangChain
+- OpenAI API
+- Streamlit
+
+## Project Architecture
+
+![Project Architecture](powerbi/images/project_workflow.png)
+
+```text
+Raw CSV
+  -> Bronze layer
+  -> Silver cleaning and feature engineering
+  -> Gold star schema
+  -> PostgreSQL warehouse
+  -> Power BI dashboard
+  -> Machine learning prediction output
+  -> LangChain SQL chatbot and Streamlit app
+```
 
 ## Data Pipeline
 
+### Raw Layer
+
+The Raw layer stores the original Kaggle dataset without modification.
+
+Output:
+
+- `data/raw/hotel_bookings.csv`
+
 ### Bronze Layer
 
-The Bronze layer stores the raw hotel booking dataset with minimal changes. Technical metadata columns are added for traceability:
+The Bronze layer stores the raw hotel booking dataset with minimal technical metadata added for traceability.
+
+Metadata added:
 
 - `ingestion_timestamp`
 - `source_file_name`
 - `batch_id`
 
-No business cleaning is applied at this stage.
+Output:
+
+- `data/bronze/hotel_bookings_bronze.csv`
+
+No business cleaning is applied in this layer.
 
 ### Silver Layer
 
-The Silver layer applies data cleaning and feature engineering. Key cleaning steps include:
+The Silver layer applies data cleaning and feature engineering.
 
-- Handling missing values in `country`, `agent`, `company`, and `children`
-- Removing invalid records such as zero guests and zero-night bookings
-- Removing negative ADR values
-- Creating useful business columns such as:
-  - `total_nights`
-  - `total_guests`
-  - `booking_status`
-  - `booking_value`
-  - `estimated_revenue`
+Cleaning and transformation steps include:
+
+- Filling missing `country` values with `Unknown`
+- Filling missing `children`, `agent`, and `company` values with `0`
+- Removing duplicate rows
+- Removing zero-guest bookings
+- Removing zero-night bookings
+- Removing invalid ADR values
+- Creating `arrival_date`
+- Creating `total_nights`
+- Creating `total_guests`
+- Creating `booking_status`
+- Creating `booking_value`
+- Creating `estimated_revenue`
+
+Output:
+
+- `data/silver/hotel_bookings_silver.csv`
 
 ### Gold Layer
 
-The Gold layer transforms the cleaned Silver data into a star schema for reporting and analysis. The Gold layer includes one fact table and multiple dimension tables.
+The Gold layer transforms the cleaned Silver data into a star schema for analytics and reporting.
 
+Gold outputs:
+
+- `fact_bookings.csv`
+- `dim_hotel.csv`
+- `dim_date.csv`
+- `dim_room_type.csv`
+- `dim_country.csv`
+- `dim_market_segment.csv`
+- `dim_customer_segment.csv`
+- `dim_meal.csv`
+
+These files are loaded into PostgreSQL and used by Power BI and the AI SQL agent.
 
 ## Data Model
 
-The Gold layer uses a star schema design to support efficient reporting in Power BI.
+The Gold layer uses a star schema design with one central fact table and multiple dimension tables.
+
 ![Star Schema](powerbi/images/StarSchema.png)
 
-The fact table contains booking-level metrics such as total nights, total guests, ADR, booking value, estimated revenue, cancellation status, and booking changes.'
+The fact table contains booking-level metrics such as:
+
+- Cancellation status
+- Lead time
+- Total nights
+- Total guests
+- ADR
+- Booking value
+- Estimated revenue
+- Booking changes
+- Special requests
+
+Dimension tables provide descriptive context for hotel type, date, room type, country, market segment, customer segment, and meal plan.
+
+## PostgreSQL Warehouse
+
+PostgreSQL is used as the analytical warehouse for the Gold layer and machine learning prediction output.
+
+Main SQL scripts:
+
+- `sql/create_gold_tables.pgsql` creates the Gold fact and dimension tables.
+- `sql/load_gold_tables.pgsql` loads Gold CSV files into PostgreSQL.
+- `sql/load_prediction.pgsql` creates and loads the prediction table.
+- `sql/analytics_queries.pgsql` contains business analysis queries.
+
+Example loading flow:
+
+```powershell
+psql -U postgres -d hotel_booking_db -f sql/create_gold_tables.pgsql
+psql -U postgres -d hotel_booking_db -f sql/load_gold_tables.pgsql
+psql -U postgres -d hotel_booking_db -f sql/load_prediction.pgsql
+```
 
 ## Power BI Dashboard
+
+The Power BI dashboard visualizes booking demand, cancellation risk, revenue performance, and machine learning prediction results.
+
+Dashboard file:
+
+- `powerbi/Hotel_analysis.pbix`
+
+Embedded dashboard:
+
+[Open Power BI Report](https://app.powerbi.com/reportEmbed?reportId=37198e33-2448-47b6-9619-f129bf3124a2&autoAuth=true&ctid=ef7a487a-77ca-410a-803d-e426b62a587f&actionBarEnabled=false&reportCopilotInEmbed=false)
 
 ### Page 1: Executive Overview
 
 Provides a high-level summary of hotel booking performance.
+
 ![Overview](powerbi/images/Overview.png)
 
 ### Page 2: Booking Cancellation Risk Analysis
 
 Identifies where cancellation risk is concentrated and estimates potential revenue loss.
+
 ![Cancellation](powerbi/images/Cancellation.png)
 
-### Page 3: Revenue & ADR Analysis
+### Page 3: Revenue and ADR Analysis
 
 Analyzes estimated revenue, booking value, ADR, and revenue loss across hotel types, months, and market segments.
+
 ![Revenue](powerbi/images/Revenue.png)
 
-### Page 4: Cancellation Risk Analysis
-Predicts the likelihood of hotel booking cancellations using a supervised machine learning model. This page presents model performance metrics and a confusion matrix to evaluate how effectively the model identifies bookings with high cancellation risk.
-![Cancellation](powerbi/images/Prediction.png)
-## Machine Learning Extension: Cancellation Risk Prediction
+### Page 4: Cancellation Prediction
+
+Shows cancellation prediction results from the machine learning model, including model performance and high-risk booking patterns.
+
+![Prediction](powerbi/images/Prediction.png)
+
+## Machine Learning Extension
 
 A supervised machine learning model was developed to predict whether a booking is likely to be cancelled.
 
-The target variable is:
+Target variable:
 
 - `is_canceled`
-  - `0` = Not Cancelled
+  - `0` = Not cancelled
   - `1` = Cancelled
 
 Three models were compared:
@@ -119,75 +225,139 @@ Three models were compared:
 | Random Forest | 81.46% | 63.79% | 76.40% | 69.53% | 0.8864 |
 | XGBoost | 81.99% | 71.90% | 57.39% | 63.83% | 0.8802 |
 
-Random Forest was selected because it provided the best balance for the business objective. It maintained high recall while improving precision, F1-score, and ROC-AUC compared with the baseline Logistic Regression model.
+Random Forest was selected because it provides a strong balance between recall, precision, F1 score, and ROC-AUC for identifying cancellation risk.
 
-The model output was saved as `fact_booking_predictions.csv` and visualized in Power BI to show:
+Prediction output:
 
-- Cancellation probability
-- Risk level
-- Predicted cancelled bookings
-- High-risk bookings
-- Expected revenue at risk
+- `data/ml/fact_booking_predictions.csv`
 
-## Key Business Insights
 
-- City Hotel generated higher booking volume than Resort Hotel, but also showed higher cancellation risk.
-- Booking demand and estimated revenue were strongest during mid-year months, especially around July and August.
-- Cancelled bookings increased faster than confirmed bookings, indicating that cancellation control is an important business issue.
-- The Random Forest model identified high-risk bookings and estimated expected revenue at risk, helping hotels prioritize follow-up actions.
-- Online TA and long lead-time bookings showed stronger cancellation risk patterns, suggesting that hotels should monitor these segments more closely.
+
+## AI SQL Agent
+
+This project includes a LangChain-powered SQL chatbot that allows users to ask natural-language questions about the hotel booking warehouse.
+
+The agent connects to PostgreSQL, interprets business questions, generates SQL queries, executes them against the warehouse tables, and returns a business-friendly answer.
+
+Agent capabilities:
+
+- Natural-language question answering
+- PostgreSQL warehouse connection
+- Access to Gold star schema tables
+- Access to machine learning prediction output
+- Suggested business questions
+- Optional generated SQL display in the Streamlit app
+- Interactive terminal and web UI modes
+
+Example questions:
+
+- Which hotel has the highest cancellation rate?
+- What is the total expected revenue at risk?
+- Which market segment has the most high-risk bookings?
+- Which month generated the highest estimated revenue?
+- How many bookings were predicted to be cancelled?
+
+## Streamlit AI Dashboard App
+
+A Streamlit app combines the embedded Power BI dashboard and the AI SQL chatbot in one interface.
+
+Streamlit features:
+
+- Embedded Power BI report
+- SQL chatbot tab
+- Suggested question buttons
+- Model selector
+- Generated SQL visibility toggle
+- Chat history
+
+Run the app:
+
+```powershell
+streamlit run agent/03_streamlit_sql_chatbot.py
+```
+
+Then open:
+
+```text
+http://localhost:8501
+```
+
 
 ## Repository Structure
 
 ```text
 hotel-pricing-lakehouse/
-│
-├── data/
-│   ├── raw/
-│   ├── bronze/
-│   ├── silver/
-│   └── gold/
-│
-├── notebooks/
-│   ├── 01_data_exploration.ipynb
-│   ├── 02_bronze_ingestion.ipynb
-│   ├── 03_silver_cleaning.ipynb
-│   └── 04_gold_modeling.ipynb
-│
-├── sql/
-│   ├── create_gold_tables.sql
-│   ├── load_gold_tables.sql
-│   └── analysis_queries.sql
-│
-├── powerbi/
-│   └── hotel_booking_dashboard.pbix
-│   └── images/
-│
-├── docs/
-│   ├── bronze_layer.md
-│   ├── silver_layer.md
-│   ├── gold_layer.md
-│   └── data_dictionary.md
-│
-│
-└── README.md
+|
+|-- agent/
+|   |-- 01_test_db_connection.py
+|   |-- 02_sql_chatbot.py
+|   |-- 03_streamlit_sql_chatbot.py
+|   |-- sql_agent_core.py
+|
+|-- data/
+|   |-- raw/
+|   |-- bronze/
+|   |-- silver/
+|   |-- gold/
+|   |-- ml/
+|
+|-- docs/
+|   |-- bronze_layer.md
+|   |-- silver_layer.md
+|   |-- gold_layer.md
+|   |-- data_exploration_findings.md
+|
+|-- models/
+|   |-- random_forest_cancellation_model.pkl
+|
+|-- notebooks/
+|   |-- 01_data_exploration.ipynb
+|   |-- 02_bronze_ingestion.ipynb
+|   |-- 03_silver_cleaning.ipynb
+|   |-- 04_gold_modeling.ipynb
+|   |-- 05_cancellation_prediction_model.ipynb
+|
+|-- powerbi/
+|   |-- Hotel_analysis.pbix
+|   |-- images/
+|
+|-- sql/
+|   |-- create_gold_tables.pgsql
+|   |-- load_gold_tables.pgsql
+|   |-- load_prediction.pgsql
+|   |-- analytics_queries.pgsql
+|
+|-- requirements.txt
+|-- README.md
 ```
 
 ## Data Quality Decisions
 
-| Issue                 | Action                     |
-| --------------------- | -------------------------- |
-| Missing country       | Filled with `Unknown`      |
-| Missing children      | Filled with `0`            |
-| Missing agent/company | Filled with `0`            |
-| Negative ADR          | Removed                    |
-| Zero guests           | Removed                    |
-| Zero-night bookings   | Removed                    |
-| Duplicates            | Checked during exploration |
+| Issue | Action |
+|---|---|
+| Missing country | Filled with `Unknown` |
+| Missing children | Filled with `0` |
+| Missing agent/company | Filled with `0` |
+| Negative ADR | Removed |
+| Zero guests | Removed |
+| Zero-night bookings | Removed |
+| Duplicates | Removed during Silver cleaning |
 
+## Key Business Insights
 
+- City Hotel generated higher booking volume than Resort Hotel and showed stronger cancellation risk.
+- Booking demand and estimated revenue were strongest during mid-year months, especially July and August.
+- Cancelled bookings created meaningful expected revenue loss, making cancellation risk an important operational issue.
+- Online TA and long lead-time bookings showed stronger cancellation risk patterns.
+- The Random Forest model helps estimate cancellation probability and expected revenue at risk for future booking records.
 
+## Security Notes
+
+- `.env` is excluded from Git and should not be committed.
+- API keys and database passwords should be stored only in local environment variables.
+- In a production deployment, the SQL agent should connect using a read-only database user.
+- Additional SQL validation should be added before allowing public access.
 
 ## Author
 
-Created by Xu Peng
+Created by Chan Xu Peng.
