@@ -1,0 +1,319 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pr:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  pythonVersion: "3.11"
+
+steps:
+  - checkout: self
+    displayName: Checkout repository
+
+  - task: UsePythonVersion@0
+    displayName: Set up Python $(pythonVersion)
+    inputs:
+      versionSpec: "$(pythonVersion)"
+
+  - script: |
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
+    displayName: Install Python dependencies
+
+  - script: |
+      python --version
+      pip --version
+      pip list
+    displayName: Verify Python environment
+
+  - script: |
+      python -m py_compile \
+        agent/01_test_db_connection.py \
+        agent/02_sql_chatbot.py \
+        agent/03_streamlit_sql_chatbot.py \
+        agent/sql_agent_core.py \
+        agent/rag_doc_core.py
+    displayName: Check Python syntax
+
+  - script: |
+      python - <<'PY'
+      import sys
+
+      sys.path.insert(0, "agent")
+
+      from rag_doc_core import build_chunks, retrieve_chunks
+
+      chunks = build_chunks()
+      assert len(chunks) > 0, "No documentation chunks were created"
+
+      matches = retrieve_chunks("Why was Random Forest selected?", chunks)
+      assert len(matches) > 0, "RAG retriever returned no matches"
+
+      retrieved_sources = {chunk.source for chunk, _score in matches}
+      expected_sources = {"README.md", "docs/data_exploration_findings.md"}
+      assert retrieved_sources & expected_sources, (
+          "Expected README.md or docs/data_exploration_findings.md "
+          f"in retrieved sources, got {sorted(retrieved_sources)}"
+      )
+
+      print(f"Documentation chunks created: {len(chunks)}")
+      print("Top retrieved sources:")
+      for chunk, score in matches[:3]:
+          print(f"- {chunk.source} | {chunk.heading} | score={score:.3f}")
+      PY
+    displayName: Test RAG documentation indexing
+
+  - script: |
+      python - <<'PY'
+      from pathlib import Path
+
+      required_files = [
+          "README.md",
+          "requirements.txt",
+          "docs/bronze_layer.md",
+          "docs/silver_layer.md",
+          "docs/gold_layer.md",
+          "docs/data_exploration_findings.md",
+          "sql/create_gold_tables.pgsql",
+          "sql/load_gold_tables.pgsql",
+          "sql/load_prediction.pgsql",
+          "sql/analytics_queries.pgsql",
+          "data/raw/hotel_bookings.csv",
+          "data/bronze/hotel_bookings_bronze.csv",
+          "data/silver/hotel_bookings_silver.csv",
+          "data/gold/fact_bookings.csv",
+          "data/ml/fact_booking_predictions.csv",
+          "powerbi/Hotel_analysis.pbix",
+      ]
+
+      missing_files = [
+          file_path
+          for file_path in required_files
+          if not Path(file_path).is_file()
+      ]
+
+      assert not missing_files, (
+          "Missing required project files: "
+          + ", ".join(missing_files)
+      )
+
+      print("Required project files found:")
+      for file_path in required_files:
+          print(f"- {file_path}")
+      PY
+    displayName: Check required project files
+
+  - script: |
+      python - <<'PY'
+      from pathlib import Path
+
+      sql_expectations = {
+          "sql/create_gold_tables.pgsql": [
+              "CREATE TABLE dim_hotel",
+              "Create table dim_date",
+              "Create table dim_room_type",
+              "Create table dim_country",
+              "Create table dim_market_segment",
+              "Create table dim_customer_segment",
+              "Create table dim_meal",
+              "CREATE TABLE fact_bookings",
+          ],
+          "sql/load_gold_tables.pgsql": [
+              "\\copy dim_hotel",
+              "\\copy dim_date",
+              "\\copy fact_bookings",
+          ],
+          "sql/load_prediction.pgsql": [
+              "CREATE TABLE fact_booking_predictions",
+              "\\copy fact_booking_predictions",
+          ],
+          "sql/analytics_queries.pgsql": [
+              "fact_bookings",
+              "dim_hotel",
+              "estimated_revenue",
+          ],
+      }
+
+      for sql_file, expected_terms in sql_expectations.items():
+          path = Path(sql_file)
+          assert path.is_file(), f"Missing SQL file: {sql_file}"
+
+          content = path.read_text(encoding="utf-8").strip()
+          assert content, f"SQL file is empty: {sql_file}"
+
+          missing_terms = [
+              term
+              for term in expected_terms
+              if term.lower() not in content.lower()
+          ]
+          assert not missing_terms, (
+              f"{sql_file} is missing expected terms: "
+              + ", ".join(missing_terms)
+          )
+
+          print(f"Validated {sql_file}")
+      PY
+    displayName: Validate SQL scripts
+
+  - script: |
+      python - <<'PY'
+      import csv
+      from pathlib import Path
+
+      csv_expectations = {
+          "data/silver/hotel_bookings_silver.csv": [
+              "hotel",
+              "is_canceled",
+              "lead_time",
+              "arrival_date",
+              "market_segment",
+              "customer_type",
+              "adr",
+              "total_nights",
+              "total_guests",
+              "booking_status",
+              "estimated_revenue",
+          ],
+          "data/gold/fact_bookings.csv": [
+              "fact_booking_id",
+              "hotel_id",
+              "date_id",
+              "is_canceled",
+              "booking_status",
+              "lead_time",
+              "total_nights",
+              "total_guests",
+              "adr",
+              "booking_value",
+              "estimated_revenue",
+          ],
+          "data/ml/fact_booking_predictions.csv": [
+              "prediction_id",
+              "fact_booking_id",
+              "cancellation_probability",
+              "predicted_cancelled",
+              "risk_level",
+              "booking_value",
+              "expected_revenue_at_risk",
+              "model_name",
+              "model_version",
+              "prediction_timestamp",
+          ],
+      }
+
+      for csv_file, expected_columns in csv_expectations.items():
+          path = Path(csv_file)
+          assert path.is_file(), f"Missing CSV file: {csv_file}"
+          assert path.stat().st_size > 0, f"CSV file is empty: {csv_file}"
+
+          with path.open(newline="", encoding="utf-8") as file:
+              reader = csv.reader(file)
+              header = next(reader, None)
+
+          assert header, f"CSV file has no header: {csv_file}"
+          missing_columns = [
+              column
+              for column in expected_columns
+              if column not in header
+          ]
+          assert not missing_columns, (
+              f"{csv_file} is missing expected columns: "
+              + ", ".join(missing_columns)
+          )
+
+          print(f"Validated {csv_file}: {len(header)} columns")
+      PY
+    displayName: Validate CSV output schemas
+
+  - script: |
+      python - <<'PY'
+      import csv
+      from pathlib import Path
+
+      def read_csv_rows(file_path):
+          with Path(file_path).open(newline="", encoding="utf-8") as file:
+              return list(csv.DictReader(file))
+
+      silver_rows = read_csv_rows("data/silver/hotel_bookings_silver.csv")
+      fact_rows = read_csv_rows("data/gold/fact_bookings.csv")
+      prediction_rows = read_csv_rows("data/ml/fact_booking_predictions.csv")
+
+      assert len(silver_rows) > 0, "Silver CSV has no data rows"
+      assert len(fact_rows) > 0, "Gold fact CSV has no data rows"
+      assert len(prediction_rows) > 0, "Prediction CSV has no data rows"
+
+      assert len(silver_rows) == len(fact_rows), (
+          "Silver and Gold fact row counts do not match: "
+          f"{len(silver_rows)} vs {len(fact_rows)}"
+      )
+      assert len(fact_rows) == len(prediction_rows), (
+          "Gold fact and prediction row counts do not match: "
+          f"{len(fact_rows)} vs {len(prediction_rows)}"
+      )
+
+      valid_booking_statuses = {"Canceled", "Not Canceled"}
+      silver_statuses = {row["booking_status"] for row in silver_rows}
+      assert silver_statuses <= valid_booking_statuses, (
+          "Unexpected booking statuses found: "
+          + ", ".join(sorted(silver_statuses - valid_booking_statuses))
+      )
+
+      valid_risk_levels = {"Low Risk", "Medium Risk", "High Risk"}
+      risk_levels = {row["risk_level"] for row in prediction_rows}
+      assert risk_levels <= valid_risk_levels, (
+          "Unexpected risk levels found: "
+          + ", ".join(sorted(risk_levels - valid_risk_levels))
+      )
+
+      for index, row in enumerate(prediction_rows, start=2):
+          probability = float(row["cancellation_probability"])
+          assert 0 <= probability <= 1, (
+              "Cancellation probability outside 0-1 range "
+              f"at CSV row {index}: {probability}"
+          )
+
+          expected_revenue_at_risk = float(row["expected_revenue_at_risk"])
+          assert expected_revenue_at_risk >= 0, (
+              "Negative expected revenue at risk "
+              f"at CSV row {index}: {expected_revenue_at_risk}"
+          )
+
+      print(f"Silver rows: {len(silver_rows)}")
+      print(f"Gold fact rows: {len(fact_rows)}")
+      print(f"Prediction rows: {len(prediction_rows)}")
+      print(f"Booking statuses: {sorted(silver_statuses)}")
+      print(f"Risk levels: {sorted(risk_levels)}")
+      PY
+    displayName: Validate basic data quality
+
+  - script: |
+      streamlit run agent/03_streamlit_sql_chatbot.py \
+        --server.port 8501 \
+        --server.headless true &
+      STREAMLIT_PID=$!
+
+      for attempt in $(seq 1 20); do
+        if curl --fail --silent http://localhost:8501/_stcore/health; then
+          echo "Streamlit health check passed"
+          kill "$STREAMLIT_PID"
+          wait "$STREAMLIT_PID" || true
+          exit 0
+        fi
+        echo "Waiting for Streamlit to start... attempt ${attempt}"
+        sleep 1
+      done
+
+      echo "Streamlit health check failed"
+      kill "$STREAMLIT_PID" || true
+      wait "$STREAMLIT_PID" || true
+      exit 1
+    displayName: Smoke test Streamlit startup
+  
