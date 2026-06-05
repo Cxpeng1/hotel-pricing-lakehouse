@@ -50,6 +50,7 @@ The raw dataset is preserved in the Raw and Bronze layers. Cleaning, feature eng
 - LangChain
 - OpenAI API
 - Streamlit
+- Azure DevOps
 
 ## Project Architecture
 
@@ -64,6 +65,7 @@ Raw CSV
   -> Power BI dashboard
   -> Machine learning prediction output
   -> LangChain SQL chatbot and Streamlit app
+  -> Azure DevOps CI validation
 ```
 
 ## Data Pipeline
@@ -297,6 +299,26 @@ This complements the SQL agent:
 | SQL chatbot | Metrics, KPIs, aggregations, and warehouse questions |
 | RAG chatbot | Documentation, methodology, findings, and explanation questions |
 
+## CI Pipeline
+
+This project includes an Azure DevOps CI pipeline defined in `azure-pipelines.yml`.
+
+The pipeline runs automatically on pushes and pull requests targeting `main`.
+
+CI checks include:
+
+- Setting up Python 3.11
+- Installing dependencies from `requirements.txt`
+- Checking Python syntax for the agent and Streamlit files
+- Testing that the RAG chatbot can index `README.md` and `docs/*.md`
+- Checking required project files
+- Validating SQL warehouse scripts
+- Validating key CSV output schemas
+- Running basic data quality checks
+- Starting the Streamlit app and checking its health endpoint
+
+The CI pipeline does not call the OpenAI API or connect to PostgreSQL. This keeps the first CI version stable, fast, and safe for pull request validation.
+
 Run the app:
 
 ```powershell
@@ -319,6 +341,7 @@ hotel-pricing-lakehouse/
 |   |-- 01_test_db_connection.py
 |   |-- 02_sql_chatbot.py
 |   |-- 03_streamlit_sql_chatbot.py
+|   |-- rag_doc_core.py
 |   |-- sql_agent_core.py
 |
 |-- data/
@@ -355,6 +378,7 @@ hotel-pricing-lakehouse/
 |   |-- analytics_queries.pgsql
 |
 |-- requirements.txt
+|-- azure-pipelines.yml
 |-- README.md
 ```
 
@@ -384,6 +408,16 @@ hotel-pricing-lakehouse/
 - API keys and database passwords should be stored only in local environment variables.
 - In a production deployment, the SQL agent should connect using a read-only database user.
 - Additional SQL validation should be added before allowing public access.
+- In Azure DevOps, secrets should be stored in secure variables or Azure Key Vault instead of `.env`.
+
+## Future Improvements
+
+- Add stricter SQL validation to allow only read-only `SELECT` queries.
+- Add unit tests for RAG tokenization, chunking, and retrieval logic.
+- Add integration tests using a temporary PostgreSQL database.
+- Move PostgreSQL to a cloud database for deployment.
+- Add Azure Key Vault, Application Insights, and Log Analytics for production readiness.
+- Add CD to deploy the Streamlit app to Azure App Service after CI passes.
 
 ## Author
 

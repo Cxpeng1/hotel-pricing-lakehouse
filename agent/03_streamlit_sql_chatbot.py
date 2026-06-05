@@ -265,7 +265,6 @@ def main() -> None:
 
     with chat_tab:
         render_suggested_sql_questions()
-        agent_executor = get_agent(model=model, verbose=verbose)
         render_sql_chat_history(show_sql=show_sql)
 
         question = st.chat_input(
@@ -273,12 +272,14 @@ def main() -> None:
             key="sql_chat_input",
         )
         if question:
+            agent_executor = get_agent(model=model, verbose=verbose)
             submit_question(question, agent_executor)
             st.rerun()
 
         if st.session_state.pending_sql_question:
             pending_question = st.session_state.pending_sql_question
             st.session_state.pending_sql_question = None
+            agent_executor = get_agent(model=model, verbose=verbose)
             submit_question(pending_question, agent_executor)
             st.rerun()
 

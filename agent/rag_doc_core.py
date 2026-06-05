@@ -155,7 +155,7 @@ def build_chunks() -> list[DocumentChunk]:
                 )
     return chunks
 
-
+# cosine similarity scoring without external dependencies for a small number of chunks
 def score_chunk(query_tokens: Counter[str], query_norm: float, chunk: DocumentChunk) -> float:
     if query_norm == 0 or chunk.norm == 0:
         return 0.0
@@ -166,11 +166,12 @@ def score_chunk(query_tokens: Counter[str], query_norm: float, chunk: DocumentCh
 def retrieve_chunks(question: str, chunks: list[DocumentChunk], top_k: int = 5) -> list[tuple[DocumentChunk, float]]:
     query_tokens = Counter(tokenize(question))
     query_norm = math.sqrt(sum(value * value for value in query_tokens.values()))
-
+    # For every chunk, calculate a similarity score.
     ranked = [
         (chunk, score_chunk(query_tokens, query_norm, chunk))
         for chunk in chunks
     ]
+    # This removes chunks that have no similarity.
     ranked = [item for item in ranked if item[1] > 0]
     ranked.sort(key=lambda item: item[1], reverse=True)
     return ranked[:top_k]
