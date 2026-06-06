@@ -78,10 +78,12 @@ steps:
       required_files = [
           "README.md",
           "requirements.txt",
+          "startup.sh",
           "docs/bronze_layer.md",
           "docs/silver_layer.md",
           "docs/gold_layer.md",
           "docs/data_exploration_findings.md",
+          "deployment/azure_app_service.md",
           "sql/create_gold_tables.pgsql",
           "sql/load_gold_tables.pgsql",
           "sql/load_prediction.pgsql",
@@ -295,9 +297,7 @@ steps:
     displayName: Validate basic data quality
 
   - script: |
-      streamlit run agent/03_streamlit_sql_chatbot.py \
-        --server.port 8501 \
-        --server.headless true &
+      PORT=8501 bash startup.sh &
       STREAMLIT_PID=$!
 
       for attempt in $(seq 1 20); do
