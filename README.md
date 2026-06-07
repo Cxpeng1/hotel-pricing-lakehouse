@@ -331,6 +331,44 @@ Then open:
 http://localhost:8501
 ```
 
+## Azure App Service Startup
+
+The project includes `startup.sh` as the production startup entrypoint for Azure App Service.
+
+Deployment configuration notes are documented in:
+
+- `deployment/azure_resources_plan.md`
+- `deployment/azure_app_service.md`
+- `deployment/postgresql_cloud_setup.md`
+- `deployment/app_service_deployment_workflow.md`
+
+Azure App Service startup command:
+
+```bash
+bash startup.sh
+```
+
+The script starts Streamlit with:
+
+- `0.0.0.0` as the server address so Azure can expose the app publicly
+- `${PORT}` when Azure provides a port, otherwise `8000`
+- headless mode for server deployment
+
+Before full Azure deployment, configure application settings or Key Vault secrets for:
+
+- `OPENAI_API_KEY`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_DB`
+
+The local `.env` file is for development only and should not be uploaded to Azure.
+
+For cloud PostgreSQL setup and warehouse loading, see:
+
+- `scripts/load_postgres_warehouse.ps1`
+
 
 ## Repository Structure
 
@@ -357,6 +395,12 @@ hotel-pricing-lakehouse/
 |   |-- gold_layer.md
 |   |-- data_exploration_findings.md
 |
+|-- deployment/
+|   |-- azure_resources_plan.md
+|   |-- azure_app_service.md
+|   |-- postgresql_cloud_setup.md
+|   |-- app_service_deployment_workflow.md
+|
 |-- models/
 |   |-- random_forest_cancellation_model.pkl
 |
@@ -377,8 +421,12 @@ hotel-pricing-lakehouse/
 |   |-- load_prediction.pgsql
 |   |-- analytics_queries.pgsql
 |
+|-- scripts/
+|   |-- load_postgres_warehouse.ps1
+|
 |-- requirements.txt
 |-- azure-pipelines.yml
+|-- startup.sh
 |-- README.md
 ```
 

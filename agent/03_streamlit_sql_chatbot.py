@@ -7,10 +7,7 @@ Run:
 
 from __future__ import annotations
 
-import html
-
 import streamlit as st
-import streamlit.components.v1 as components
 
 from rag_doc_core import RAG_SUGGESTED_QUESTIONS, answer_document_question
 from sql_agent_core import (
@@ -70,17 +67,11 @@ def configure_page() -> None:
 
 
 def render_powerbi_report() -> None:
-    iframe = f"""
-    <iframe
-        title="Hotel_analysis"
-        width="100%"
-        height="760"
-        src="{html.escape(POWERBI_EMBED_URL, quote=True)}"
-        frameborder="0"
-        allowFullScreen="true">
-    </iframe>
-    """
-    components.html(iframe, height=780)
+    st.iframe(
+        POWERBI_EMBED_URL,
+        height=780,
+        width="stretch",
+    )
 
 
 @st.cache_resource(show_spinner=False)
