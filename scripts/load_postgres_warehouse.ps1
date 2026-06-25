@@ -24,6 +24,11 @@ if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $env:PGPASSWORD = $env:POSTGRES_PASSWORD
+$sslMode = [Environment]::GetEnvironmentVariable("POSTGRES_SSLMODE")
+if ([string]::IsNullOrWhiteSpace($sslMode)) {
+    $sslMode = "prefer"
+}
+$env:PGSSLMODE = $sslMode
 
 function Convert-ToPsqlPath {
     param([string]$RelativePath)
@@ -141,4 +146,5 @@ try {
 finally {
     Remove-Item -LiteralPath $tempSqlFile -Force -ErrorAction SilentlyContinue
     Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue
+    Remove-Item Env:\PGSSLMODE -ErrorAction SilentlyContinue
 }

@@ -5,6 +5,7 @@ Shared LangChain SQL agent setup for the hotel booking warehouse.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from urllib.parse import quote_plus
 
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ from langchain_openai import ChatOpenAI
 
 
 DEFAULT_MODEL = "gpt-4o-mini"
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 WAREHOUSE_TABLES = [
     "fact_bookings",
@@ -49,7 +51,7 @@ If a question cannot be answered from the schema, say what data is missing.
 
 
 def load_environment() -> None:
-    load_dotenv()
+    load_dotenv(PROJECT_ROOT / ".env", override=True)
 
 
 def get_required_env(name: str) -> str:
@@ -60,15 +62,18 @@ def get_required_env(name: str) -> str:
 
 
 def build_database_uri() -> str:
+    load_environment()
     postgres_user = get_required_env("POSTGRES_USER")
     postgres_password = quote_plus(get_required_env("POSTGRES_PASSWORD"))
     postgres_host = get_required_env("POSTGRES_HOST")
     postgres_port = get_required_env("POSTGRES_PORT")
     postgres_db = get_required_env("POSTGRES_DB")
+    postgres_sslmode = os.getenv("POSTGRES_SSLMODE", "prefer")
 
     return (
         f"postgresql+psycopg2://{postgres_user}:{postgres_password}"
         f"@{postgres_host}:{postgres_port}/{postgres_db}"
+        f"?sslmode={postgres_sslmode}"
     )
 
 
@@ -103,3 +108,27 @@ def create_hotel_sql_agent(
 
 def ask(agent_executor, question: str):
     return agent_executor.invoke({"input": question})
+
+
+def extract_sql_queries(response: dict) -> list[str]:
+    queries: list[str] = []
+    for step in response.get("intermediate_steps", []):
+        if not isinstance(step, tuple) or len(step) < 1:
+            continue
+
+        action = step[0]
+        tool_name = getattr(action, "tool", "")
+        tool_input = getattr(action, "tool_input", None)
+
+        if "query" not in tool_name.lower() and "sql" not in tool_name.lower():
+            continue
+
+        if isinstance(tool_input, dict):
+            query = tool_input.get("query") or tool_input.get("sql")
+        else:
+            query = tool_input
+
+        if isinstance(query, str) and query.strip():
+            queries.append(query.strip())
+
+    return queries

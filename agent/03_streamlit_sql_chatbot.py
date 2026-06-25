@@ -8,16 +8,27 @@ Run:
 from __future__ import annotations
 
 import streamlit as st
+import streamlit.components.v1 as components
 
+from agentic_rag_graph import run_agentic_rag
 from rag_doc_core import RAG_SUGGESTED_QUESTIONS, answer_document_question
 from sql_agent_core import (
     DEFAULT_MODEL,
     SAMPLE_QUESTIONS,
     ask,
     create_hotel_sql_agent,
+    extract_sql_queries,
     load_environment,
 )
 
+AGENTIC_SUGGESTED_QUESTIONS = [
+    "Which hotel has the highest cancellation rate?",
+    "What cleaning steps were applied in the Silver layer?",
+    "Why was Random Forest selected as the final model?",
+    "Why is Online TA risky and how much revenue is exposed?",
+    "What should management focus on to reduce cancellations?",
+    "Can you forecast next year revenue?",
+]
 
 POWERBI_EMBED_URL = (
     "https://app.powerbi.com/reportEmbed?"
@@ -67,10 +78,10 @@ def configure_page() -> None:
 
 
 def render_powerbi_report() -> None:
-    st.iframe(
+    components.iframe(
         POWERBI_EMBED_URL,
         height=780,
-        width="stretch",
+        scrolling=True,
     )
 
 
@@ -84,31 +95,25 @@ def get_agent(model: str, verbose: bool):
     )
 
 
-def extract_sql_queries(response: dict) -> list[str]:
-    queries: list[str] = []
-    for step in response.get("intermediate_steps", []):
-        if not isinstance(step, tuple) or len(step) < 1:
-            continue
-
-        action = step[0]
-        tool_name = getattr(action, "tool", "")
-        tool_input = getattr(action, "tool_input", None)
-
-        if "query" not in tool_name.lower() and "sql" not in tool_name.lower():
-            continue
-
-        if isinstance(tool_input, dict):
-            query = tool_input.get("query") or tool_input.get("sql")
-        else:
-            query = tool_input
-
-        if isinstance(query, str) and query.strip():
-            queries.append(query.strip())
-
-    return queries
-
-
 def initialize_state() -> None:
+    if "agentic_messages" not in st.session_state:
+        st.session_state.agentic_messages = [
+            {
+                "role": "assistant",
+                "content": (
+                    "Ask one question and I will route it to the SQL warehouse, "
+                    "project documentation, or both."
+                ),
+                "route": "",
+                "route_source": "",
+                "route_confidence": 0.0,
+                "route_reason": "",
+                "sources": [],
+                "sql_queries": [],
+                "sql_error": "",
+                "answer_error": "",
+            }
+        ]
     if "sql_messages" not in st.session_state:
         st.session_state.sql_messages = [
             {
@@ -135,6 +140,56 @@ def initialize_state() -> None:
         st.session_state.pending_sql_question = None
     if "pending_rag_question" not in st.session_state:
         st.session_state.pending_rag_question = None
+    if "pending_agentic_question" not in st.session_state:
+        st.session_state.pending_agentic_question = None
+
+
+def submit_agentic_question(question: str) -> None:
+    st.session_state.agentic_messages.append(
+        {
+            "role": "user",
+            "content": question,
+            "route": "",
+            "route_source": "",
+            "route_confidence": 0.0,
+            "route_reason": "",
+            "sources": [],
+            "sql_queries": [],
+            "sql_error": "",
+            "answer_error": "",
+        }
+    )
+
+    with st.spinner("Running Agentic RAG workflow..."):
+        try:
+            response = run_agentic_rag(question)
+            message = {
+                "role": "assistant",
+                "content": response["final_answer"],
+                "route": response["route"],
+                "route_source": response["route_source"],
+                "route_confidence": response["route_confidence"],
+                "route_reason": response["route_reason"],
+                "sources": response["sources"],
+                "sql_queries": response["sql_queries"],
+                "sql_error": response["sql_error"],
+                "answer_error": response["answer_error"],
+            }
+        except Exception as exc:
+            message = {
+                "role": "assistant",
+                "content": f"Agentic RAG workflow error: {exc}",
+                "route": "error",
+                "route_source": "fallback",
+                "route_confidence": 0.0,
+                "route_reason": "",
+                "sources": [],
+                "sql_queries": [],
+                "sql_error": "",
+                "answer_error": str(exc),
+            }
+
+    st.session_state.agentic_messages.append(message)
 
 
 def submit_question(question: str, agent_executor) -> None:
@@ -185,6 +240,40 @@ def render_sql_chat_history(show_sql: bool) -> None:
                         st.code(query, language="sql")
 
 
+def render_agentic_chat_history(show_sql: bool) -> None:
+    for message in st.session_state.agentic_messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+            if message.get("route"):
+                st.caption(
+                    f"Route: `{message['route']}` | "
+                    f"Router: `{message['route_source']}` | "
+                    f"Confidence: `{message['route_confidence']:.2f}`"
+                )
+                if message.get("route_reason"):
+                    st.caption(message["route_reason"])
+
+            if message.get("sources"):
+                with st.expander("Retrieved sources", expanded=False):
+                    for source in message["sources"]:
+                        st.markdown(
+                            f"**{source['source']}** - {source['heading']} "
+                            f"`score={source['score']}`"
+                        )
+                        st.caption(source["preview"])
+
+            if show_sql and (message.get("sql_queries") or message.get("sql_error")):
+                with st.expander("SQL trace", expanded=False):
+                    if message.get("sql_error"):
+                        st.error(message["sql_error"])
+                    for query in message["sql_queries"]:
+                        st.code(query, language="sql")
+
+            if message.get("answer_error"):
+                st.caption(f"Answer fallback used: {message['answer_error']}")
+
+
 def render_rag_chat_history() -> None:
     for message in st.session_state.rag_messages:
         with st.chat_message(message["role"]):
@@ -205,6 +294,15 @@ def render_suggested_sql_questions() -> None:
     for index, (column, question) in enumerate(zip(columns, SAMPLE_QUESTIONS)):
         if column.button(question, key=f"sql_suggested_{index}", use_container_width=True):
             st.session_state.pending_sql_question = question
+
+
+def render_suggested_agentic_questions() -> None:
+    st.caption("Suggested agentic questions")
+    columns = st.columns(3)
+    for index, question in enumerate(AGENTIC_SUGGESTED_QUESTIONS):
+        column = columns[index % len(columns)]
+        if column.button(question, key=f"agentic_suggested_{index}", use_container_width=True):
+            st.session_state.pending_agentic_question = question
 
 
 def render_suggested_rag_questions() -> None:
@@ -228,8 +326,10 @@ def render_sidebar() -> tuple[str, bool, bool]:
 
         st.divider()
         if st.button("Clear chat", use_container_width=True):
+            st.session_state.agentic_messages = []
             st.session_state.sql_messages = []
             st.session_state.rag_messages = []
+            st.session_state.pending_agentic_question = None
             st.session_state.pending_sql_question = None
             st.session_state.pending_rag_question = None
             st.rerun()
@@ -249,10 +349,30 @@ def main() -> None:
 
     model, show_sql, verbose = render_sidebar()
 
-    report_tab, chat_tab, rag_tab = st.tabs(["Dashboard", "SQL Chatbot", "Project Q&A"])
+    report_tab, agentic_tab, chat_tab, rag_tab = st.tabs(
+        ["Dashboard", "Agentic RAG Assistant", "SQL Chatbot", "Project Q&A"]
+    )
 
     with report_tab:
         render_powerbi_report()
+
+    with agentic_tab:
+        render_suggested_agentic_questions()
+        render_agentic_chat_history(show_sql=show_sql)
+
+        agentic_question = st.chat_input(
+            "Ask about hotel metrics, project methodology, or business recommendations",
+            key="agentic_chat_input",
+        )
+        if agentic_question:
+            submit_agentic_question(agentic_question)
+            st.rerun()
+
+        if st.session_state.pending_agentic_question:
+            pending_question = st.session_state.pending_agentic_question
+            st.session_state.pending_agentic_question = None
+            submit_agentic_question(pending_question)
+            st.rerun()
 
     with chat_tab:
         render_suggested_sql_questions()
