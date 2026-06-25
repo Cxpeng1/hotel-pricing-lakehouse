@@ -1,6 +1,20 @@
 # Hotel Pricing Lakehouse
 
-End-to-end hotel booking analytics project using Python, PostgreSQL, Power BI, machine learning, and a LangChain SQL chatbot to analyze booking demand, cancellation risk, and revenue performance.
+End-to-end hotel booking analytics project using Python, PostgreSQL, Power BI, machine learning, and a LangGraph Agentic RAG assistant to analyze booking demand, cancellation risk, revenue performance, and project methodology.
+
+## App Preview
+
+Dashboard view:
+
+![Streamlit dashboard view](powerbi/images/streamlit_1.png)
+
+Agentic RAG answer & Retrieved sources and evidence:
+
+![Streamlit Agentic RAG answer](powerbi/images/streamlit_2.png)
+
+
+
+![Streamlit retrieved sources](powerbi/images/streamlit_3.png)
 
 ## Project Overview
 
@@ -261,17 +275,19 @@ Example questions:
 
 ## Streamlit AI Dashboard App
 
-A Streamlit app combines the embedded Power BI dashboard, AI SQL chatbot, and documentation RAG chatbot in one interface.
+A Streamlit app combines the embedded Power BI dashboard, Agentic RAG assistant, SQL chatbot, and documentation RAG chatbot in one interface.
 
 Streamlit features:
 
 - Embedded Power BI report
+- Agentic RAG assistant tab
 - SQL chatbot tab
 - Project documentation Q&A tab
 - Suggested question buttons
 - Model selector
 - Generated SQL visibility toggle
 - Chat history
+
 
 ## Documentation RAG Chatbot
 
